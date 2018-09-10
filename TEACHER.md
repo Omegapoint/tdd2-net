@@ -21,6 +21,39 @@ the database.
 
 When done, you can let the group try this on their own.
 
+Open the `ServiceTests` class at L1 and write the tests
+`ShouldBeEmptyWhenCreated` and `ShouldAddProductToBasket`.  Note that
+these tests to not run unless you fix `testsettings.json`, which gives
+you an opportunity to talk about test configuration.
+
+```c#
+[Fact]
+public async Task ShouldBeEmptyWhenCreated()
+{
+    var basket = await basketService.CreateBasket();
+
+    Assert.Equal(0, basket.Count);
+    Assert.Empty(basket.Products);
+    Assert.Equal(Money.None, basket.Total);
+    Assert.Equal(Money.None, basket.TotalWithVat);
+}
+
+[Fact]
+public async Task ShouldAddProductToBasket()
+{
+    var created = await basketService.CreateBasket();
+
+    await basketService.AddProductToBasket(created.Id, 42);
+
+    var basket = await basketService.GetById(created.Id);
+
+    Assert.Equal(1, basket.Count);
+    Assert.Equal(new Money(13.76, SE), basket.Total);
+    Assert.Equal(new Money(13.76, SE) * 1.25, basket.TotalWithVat);
+    Assert.Equal("My Product", basket.Products.Single().Name);
+}
+```
+
 # Lab 2
 
 The purpose of this lab is to introduce tests that verify the hosted
@@ -34,7 +67,7 @@ realization.  If we are to write good level 2 tests, we need to have
 an understanding of the requirements.
 
 Ask the students what level 2 tests they would like to write and give
-them five minutes to think about it.  Emphasize that the purpose of
+them five minutes to think about it.ï¿½ Emphasize that the purpose of
 level 2 tests are to verify the function of the application.
 
 Then, list the tests on a white board that the students have agreed
