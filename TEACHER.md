@@ -34,7 +34,7 @@ realization.  If we are to write good level 2 tests, we need to have
 an understanding of the requirements.
 
 Ask the students what level 2 tests they would like to write and give
-them five minutes to think about it.  Emphasize that the purpose of
+them five minutes to think about it.ï¿½ Emphasize that the purpose of
 level 2 tests are to verify the function of the application.
 
 Then, list the tests on a white board that the students have agreed
@@ -52,6 +52,78 @@ There is an error to find in this lab, and that is the fact that the
 API allows the client to send in the total cost.
 
 Sending cost might be OK, but only if it is validated on the backend.
+
+Here is a set of tests as inspiration.
+
+```c#
+[Fact]
+public async Task CanCreateBasket()
+{
+    var response = await client.PostAsync("baskets", new StringContent(string.Empty));
+
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+    var getResponse = await client.GetAsync(response.Headers.Location);
+
+    Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+}
+
+[Fact]
+public async Task CanGetBasket()
+{
+    var postResponse = await client.PostAsync("baskets", new StringContent(string.Empty));
+    postResponse.EnsureSuccessStatusCode();
+
+    var response = await client.GetAsync(postResponse.Headers.Location);
+    response.EnsureSuccessStatusCode();
+
+    var basket = await response.Content.ReadAsAsync<BasketDataContract>();
+
+    Assert.Empty(basket.Products);
+    Assert.Equal(0, basket.Total.Units);
+    Assert.Null(basket.Total.CurrencyCode);
+    Assert.Equal(0, basket.TotalWithVat.Units);
+}
+
+[Fact]
+public async Task CanAddProductToBasket()
+{
+    var getProductsResponse = await client.GetAsync("products");
+    getProductsResponse.EnsureSuccessStatusCode();
+
+    var products = await getProductsResponse.Content.ReadAsAsync<IEnumerable<ProductDataContract>>();
+    var product = products.First(); // First() will throw if empty (no need to assert Any())
+
+    var postResponse = await client.PostAsync("baskets", new StringContent(string.Empty));
+    postResponse.EnsureSuccessStatusCode();
+
+    var created = await postResponse.Content.ReadAsAsync<BasketDataContract>();
+
+    var addProductResponse = await client.PostAsync($"baskets/{created.Id}/product/{product.Id}", new StringContent(string.Empty));
+    addProductResponse.EnsureSuccessStatusCode();
+
+    // We need to get the basket again after adding products
+    var response = await client.GetAsync(postResponse.Headers.Location);
+    response.EnsureSuccessStatusCode();
+
+    var basket = await response.Content.ReadAsAsync<BasketDataContract>();
+
+    Assert.Single(basket.Products);
+
+    Assert.Equal(product.Cost.Units, basket.Total.Units);
+    Assert.Equal(product.Cost.CurrencyCode, basket.Total.CurrencyCode);
+
+    Assert.True(basket.TotalWithVat.Units > 0);
+    Assert.True(basket.TotalWithVat.Units > product.Cost.Units);
+}
+
+[Fact]
+public async Task CanCheckoutBasket()
+{
+    // Create your test here
+    await Task.CompletedTask;
+}
+```
 
 # Lab 3
 
